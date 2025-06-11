@@ -1,0 +1,33 @@
+------------------------это показывает отправку сообщений из контракта на контракт----------------------------------
+
+() recv_external(slice in_msg) impure {
+    accept_message();
+
+    var (ctx_id, ctx_counter, ctx_counter_ext) = load_data();
+
+    var query_id = in_msg~load_uint(64);
+    var addr = in_msg~load_msg_addr();
+    var coins = in_msg~load_coins();
+    var increase_by = in_msg~load_uint(32);
+
+    var msg = begin_cell()
+        .store_uint(0x18, 6)
+        .store_slice(addr)
+        .store_coins(coins)
+        .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+        .store_uint(op::increase, 32)
+        .store_uint(query_id, 64)
+        .store_uint(increase_by, 32);
+    send_raw_message(msg.end_cell(), 0);
+
+    ctx_counter_ext += increase_by;
+    save_data(ctx_id, ctx_counter, ctx_counter_ext);
+
+    return ();
+}
+
+
+my_balance - баланс контракта на начало транзакции
+msg_value - средства, полученные вместе с сообщением
+in_msg_full - cell containing "header" fields of the message.
+in_msg_body - slice containing payload of the message.
