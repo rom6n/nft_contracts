@@ -8,6 +8,8 @@
 ;;           royalty_params:^RoyaltyParams
 ;;           = Storage;
 
+const op::get_rayalty_params = "op::get_royalty_params"c;
+int const::min_tons_for_storage() asm "50000000 PUSHINT";
 
 (slice, int, cell, cell, cell) load_data() inline {
   var ds = get_data().begin_parse();
@@ -44,19 +46,27 @@ slice calculate_nft_item_address(int wc, cell state_init) {
                      .begin_parse();
 }
 
+cell calculate_c4_data(int item_index, slice sender, cell nft_item_code, cell nft_content) {
+  cell data = begin_cell().store_uint(item_index, 64).store_slice(my_address()).store_slice(sender).store_ref(nft_content).end_cell(); ;; возможно сюда можно добавить owner и content для nft item
+  return begin_cell().store_uint(0, 2).store_dict(nft_item_code).store_dict(data).store_uint(0, 1).end_cell();
+}
+
 int send_message(cell msg, int mode) impure asm "SENDMSG";
 int gas_consumed() asm "GASCONSUMED";
 
-() deploy_nft_item(int item_index, cell nft_item_code, int amount, cell nft_content) impure {
+() deploy_nft_item(int item_index, slice sender, cell nft_item_code, int amount, cell nft_content) impure {
+  var [balance, _] = get_balance();
+  throw_unless(888, balance - amount >= const::min_tons_for_storage())
   cell state_init = calculate_nft_item_state_init(item_index, nft_item_code);
   slice nft_address = calculate_nft_item_address(workchain(), state_init);
+  cell c4_data = calculate_c4_data(item_index, sender, nft_item_code, nft_content);
   var msg = begin_cell()
             .store_uint(0x18, 6)
             .store_slice(nft_address)
             .store_coins(amount)
             .store_uint(4 + 2 + 1, 1 + 4 + 4 + 64 + 32 + 1 + 1 + 1)
             .store_ref(state_init) ;; возможно сюда можно добавить owner и content для nft item
-            .store_ref(nft_content);  ;; возможно сюда можно добавить owner и content для nft item
+            .store_ref(nft_content);
   send_raw_message(msg.end_cell(), 1); ;; pay transfer fees separately, revert on errors
 }
 
@@ -84,17 +94,24 @@ int gas_consumed() asm "GASCONSUMED";
     slice cs = in_msg_full.begin_parse();
     int flags = cs~load_uint(4);
 
-    if (flags & 1) { ;; ignore all bounced messages
+    var (owner_address, next_item_index, content, nft_item_code, royalty_params) = load_data();
+    
+    if (flags & 1) { 
+      var msg = begin_cell()
+          .store_uint(0x10, 6) ;; nobounce - int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool packages:MsgAddress -> 011000
+          .store_slice(owner_address)
+          .store_coins(0)
+          .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1);
+        send_raw_message(msg.end_cell(), 64); ;; carry all the remaining value of the inbound message
         return ();
     }
+
     slice sender_address = cs~load_msg_addr();
 
     int op = in_msg_body~load_uint(32);
     int query_id = in_msg_body~load_uint(64);
 
-    var (owner_address, next_item_index, content, nft_item_code, royalty_params) = load_data();
-
-    if (op == op::get_royalty_params()) {
+    if (op == op::get_royalty_params) {
         send_royalty_params(sender_address, query_id, royalty_params.begin_parse());
         return ();
     }
@@ -106,7 +123,7 @@ int gas_consumed() asm "GASCONSUMED";
       int item_index = in_msg_body~load_uint(64);
       throw_unless(402, item_index <= next_item_index);
       var is_last = item_index == next_item_index;
-      deploy_nft_item(item_index, nft_item_code, in_msg_body~load_coins(), in_msg_body~load_ref());
+      deploy_nft_item(item_index, sender_address, nft_item_code, in_msg_body~load_coins(), in_msg_body~load_ref());
       if (is_last) {
         next_item_index += 1;
         save_data(owner_address, next_item_index, content, nft_item_code, royalty_params);
@@ -125,7 +142,7 @@ int gas_consumed() asm "GASCONSUMED";
           }
 
           throw_unless(403 + counter, item_index <= next_item_index);
-          deploy_nft_item(item_index, nft_item_code, item~load_coins(), item~load_ref());
+          deploy_nft_item(item_index, sender_address, nft_item_code, item~load_coins(), item~load_ref());
           if (item_index == next_item_index) {
             next_item_index += 1;
           }
@@ -139,10 +156,24 @@ int gas_consumed() asm "GASCONSUMED";
       save_data(new_owner, next_item_index, content, nft_item_code, royalty_params);
       return ();
     }
+    if (op == 4) { ;; change content
+      save_data(owner_address, next_item_index, in_msg_body~load_ref(), nft_item_code, royalty_params);
+      return ();
+    }
+    if (op == 5) { ;; change royalty params
+      save_data(owner_address, next_item_index, content, nft_item_code, in_msg_body~load_ref());
+      return ();
+    }
+
+    if (op == 10) { ;; change code
+      set_code(in_msg_body~load_ref());
+      return ();
+    }
     throw(0xffff);
 }
 
 ;; Get methods
+;; ЭТО OFF chain пример
 
 (int, cell, slice) get_collection_data() method_id {
   var (owner_address, next_item_index, content, _, _) = load_data();

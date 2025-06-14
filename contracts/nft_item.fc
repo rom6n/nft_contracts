@@ -23,6 +23,7 @@ int min_tons_for_storage() asm "50000000 PUSHINT"; ;; 0.05 TON
 ;;  uint64 index
 ;;  MsgAddressInt collection_address
 ;;  MsgAddressInt owner_address
+;;                                                            uint32 one_usage 1 - yes (ex.: gift-code), 0 - no  NOT FOR THIS. ITS ONLY AN IDEA
 ;;  cell content
 ;;
 

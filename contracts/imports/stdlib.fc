@@ -213,6 +213,9 @@ int check_data_signature(slice data, slice signature, int public_key) asm "CHKSI
   # Persistent storage save and load
 -}
 
+;; change code of smart contract
+() set_code(cell new_code) impure asm "SETCODE";
+
 ;;; Returns the persistent contract storage cell. It can be parsed or modified with slice and builder primitives later.
 cell get_data() asm "c4 PUSH";
 

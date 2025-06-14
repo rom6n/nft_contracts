@@ -15,9 +15,10 @@
         .store_slice(addr)
         .store_coins(coins)
         .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-        .store_uint(op::increase, 32)
-        .store_uint(query_id, 64)
-        .store_uint(increase_by, 32);
+        .store_uint(op::increase, 32) -- тело сообщения |
+        .store_uint(query_id, 64)                       |
+        .store_uint(increase_by, 32);                   |
+        
     send_raw_message(msg.end_cell(), 0);
 
     ctx_counter_ext += increase_by;
