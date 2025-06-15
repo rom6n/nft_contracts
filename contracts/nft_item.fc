@@ -14,6 +14,8 @@
     2) use token holder proxies in target workchain (that way even 'non-universal' token can be used from any workchain)
 
 -}
+#include "imports/stdlib.fc";
+#include "imports/op-codes.fc";
 
 int min_tons_for_storage() asm "50000000 PUSHINT"; ;; 0.05 TON
 
@@ -28,7 +30,7 @@ int min_tons_for_storage() asm "50000000 PUSHINT"; ;; 0.05 TON
 ;;
 
 (int, int, slice, slice, cell) load_data() {
-    slice ds = get_data().begin_parse();
+    var ds = get_data().begin_parse();
     var (index, collection_address) = (ds~load_uint(64), ds~load_msg_addr());
     if (ds.slice_bits() > 0) {
       return (-1, index, collection_address, ds~load_msg_addr(), ds~load_ref());
@@ -48,7 +50,7 @@ int min_tons_for_storage() asm "50000000 PUSHINT"; ;; 0.05 TON
     );
 }
 
-() send_msg(slice to_address, int amount, int op, int query_id, builder payload, int send_mode) impure inline {
+() send_msg(slice to_address, int amount, int op, int query_id, builder payload, int send_mode) impure {
   var msg = begin_cell()
     .store_uint(0x10, 6) ;; nobounce - int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
     .store_slice(to_address)
@@ -64,8 +66,15 @@ int min_tons_for_storage() asm "50000000 PUSHINT"; ;; 0.05 TON
   send_raw_message(msg.end_cell(), send_mode);
 }
 
+int workchain() asm "0 PUSHINT";
+
+() force_chain(slice address) impure inline {
+  (int wc, _) = parse_std_addr(address);
+  throw_unless(333, wc == workchain());
+}
+
 () transfer_ownership(int my_balance, int index, slice collection_address, slice owner_address, cell content, slice sender_address, int query_id, slice in_msg_body, int fwd_fees) impure inline {
-    throw_unless(401, equal_slices(sender_address, owner_address));
+    throw_unless(401, equal_slice_bits(sender_address, owner_address));
 
     slice new_owner_address = in_msg_body~load_msg_addr();
     force_chain(new_owner_address);
@@ -122,7 +131,7 @@ int min_tons_for_storage() asm "50000000 PUSHINT"; ;; 0.05 TON
 
     (int init?, int index, slice collection_address, slice owner_address, cell content) = load_data();
     if (~ init?) {
-      throw_unless(405, equal_slices(collection_address, sender_address));
+      throw_unless(405, equal_slice_bits(collection_address, sender_address));
       var new_owner_address = in_msg_body~load_msg_addr();
       store_data(index, collection_address, new_owner_address, in_msg_body~load_ref());
       if (in_msg_body.slice_data_empty?() == false) {
@@ -137,11 +146,11 @@ int min_tons_for_storage() asm "50000000 PUSHINT"; ;; 0.05 TON
     int op = in_msg_body~load_uint(32);
     int query_id = in_msg_body~load_uint(64);
 
-    if (op == op::transfer()) {
+    if (op == 1) { ;; op::transfer()
       transfer_ownership(my_balance, index, collection_address, owner_address, content, sender_address, query_id, in_msg_body, fwd_fee);
       return ();
     }
-    if (op == op::get_static_data()) {
+    if (op == 2) { ;; op::get_static_data()
       send_msg(sender_address, 0, op::report_static_data(), query_id, begin_cell().store_uint(index, 256).store_slice(collection_address), 64);  ;; carry all the remaining value of the inbound message
       return ();
     }

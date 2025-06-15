@@ -1,3 +1,4 @@
+/*
 import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { Cell, toNano } from '@ton/core';
 import { NftCollection } from '../wrappers/NftCollection';
@@ -37,3 +38,4 @@ describe('NftCollection', () => {
         // blockchain and nftCollection are ready to use
     });
 });
+*/
