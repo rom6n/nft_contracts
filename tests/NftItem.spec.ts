@@ -1,8 +1,9 @@
 import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
-import { beginCell, Cell, toNano } from '@ton/core';
+import { beginCell, Cell, contractAddress, toNano } from '@ton/core';
 import { NftItem } from '../wrappers/NftItem';
 import '@ton/test-utils';
 import { compile } from '@ton/blueprint';
+import { todo } from 'node:test';
 
 describe('NftItem', () => {
     let code: Cell;
@@ -55,12 +56,7 @@ describe('NftItem', () => {
     });
 
     it('should send_ownership successfully var:1', async () => {
-        const ownershipResult = await nftItem.sendTransferOwnership(
-            owner.getSender(),
-            toNano('1'),
-            receiver.address,
-            owner.address, // response destination with rest amount TON
-        );
+        const ownershipResult = await nftItem.sendTransferOwnership(owner.getSender(), toNano('1'), receiver.address);
         expect(ownershipResult.transactions).toHaveTransaction({
             from: owner.address,
             to: nftItem.address,
@@ -93,7 +89,6 @@ describe('NftItem', () => {
             sender.getSender(), // !!! fail reason !!!
             toNano('1'),
             receiver.address,
-            owner.address,
         );
         expect(ownershipResult.transactions).toHaveTransaction({
             from: sender.address,
@@ -101,6 +96,9 @@ describe('NftItem', () => {
             success: false,
             exitCode: 401,
         });
+
+        const nftData = await nftItem.getNftData();
+        expect(nftData.ownerAddress.toString({ testOnly: true })).toBe(owner.address.toString({ testOnly: true })); // checking that owner isnt changed
     });
     it('should NOT send_ownership due not from owner var:2', async () => {
         const ownershipResult = await nftItem.sendTransferOwnership(
@@ -117,6 +115,9 @@ describe('NftItem', () => {
             success: false,
             exitCode: 401,
         });
+
+        const nftData = await nftItem.getNftData();
+        expect(nftData.ownerAddress.toString({ testOnly: true })).toBe(owner.address.toString({ testOnly: true })); // checking that owner isnt changed
     });
     it('should NOT send_ownership due not enough balance var:2', async () => {
         const ownershipResult = await nftItem.sendTransferOwnership(
@@ -133,5 +134,171 @@ describe('NftItem', () => {
             success: false,
             exitCode: 402,
         });
+
+        const nftData = await nftItem.getNftData();
+        expect(nftData.ownerAddress.toString({ testOnly: true })).toBe(owner.address.toString({ testOnly: true })); // checking that owner isnt changed
+    });
+
+    it('should successfully get static data', async () => {
+        const staticDataResult = await nftItem.sendGetStaticData(sender.getSender(), toNano(0.05), 312);
+        expect(staticDataResult.transactions).toHaveTransaction({
+            from: sender.address,
+            to: nftItem.address,
+            success: true,
+        });
+    });
+
+    it('should successfully init contract var:1', async () => {
+        nftItem = blockchain.openContract(
+            NftItem.createFromLiteConfig(
+                {
+                    index: 2,
+                    collection_address: collectionAddress.address,
+                },
+                code,
+            ),
+        );
+
+        const deployResult = await nftItem.sendDeploy(collectionAddress.getSender(), toNano('0.05'));
+
+        expect(deployResult.transactions).toHaveTransaction({
+            from: collectionAddress.address,
+            to: nftItem.address,
+            deploy: true,
+            success: true,
+        });
+
+        //const nftDataBefore = await nftItem.getNftData();
+        //expect(nftDataBefore.content.toString()).toBe(null); // error: null. It means all is correct
+
+        const initResult = await nftItem.sendInit(collectionAddress.getSender(), toNano('0.05'), receiver.address);
+        expect(initResult.transactions).toHaveTransaction({
+            from: collectionAddress.address,
+            to: nftItem.address,
+            success: true,
+        });
+
+        const nftDataAfter = await nftItem.getNftData();
+        expect(nftDataAfter.ownerAddress.toString({ testOnly: true })).toBe(
+            receiver.address.toString({ testOnly: true }),
+        );
+    });
+    it('should successfully init contract var:2', async () => {
+        nftItem = blockchain.openContract(
+            NftItem.createFromLiteConfig(
+                {
+                    index: 2,
+                    collection_address: collectionAddress.address,
+                },
+                code,
+            ),
+        );
+
+        const deployResult = await nftItem.sendDeploy(collectionAddress.getSender(), toNano('0.05'));
+
+        expect(deployResult.transactions).toHaveTransaction({
+            from: collectionAddress.address,
+            to: nftItem.address,
+            deploy: true,
+            success: true,
+        });
+
+        //const nftDataBefore = await nftItem.getNftData();
+        //expect(nftDataBefore.content.toString()).toBe(null); // error: null. It means all is correct
+
+        const initResult = await nftItem.sendInit(
+            collectionAddress.getSender(),
+            toNano('0.05'),
+            receiver.address,
+            'hello from init',
+            toNano('0.01'),
+        );
+        expect(initResult.transactions).toHaveTransaction({
+            from: collectionAddress.address,
+            to: nftItem.address,
+            success: true,
+        });
+
+        const nftDataAfter = await nftItem.getNftData();
+        expect(nftDataAfter.ownerAddress.toString({ testOnly: true })).toBe(
+            receiver.address.toString({ testOnly: true }),
+        );
+    });
+    it('should UNsuccessfully init contract due not from collection var:1', async () => {
+        nftItem = blockchain.openContract(
+            NftItem.createFromLiteConfig(
+                {
+                    index: 2,
+                    collection_address: collectionAddress.address,
+                },
+                code,
+            ),
+        );
+
+        const deployResult = await nftItem.sendDeploy(collectionAddress.getSender(), toNano('0.05'));
+
+        expect(deployResult.transactions).toHaveTransaction({
+            from: collectionAddress.address,
+            to: nftItem.address,
+            deploy: true,
+            success: true,
+        });
+
+        //const nftDataBefore = await nftItem.getNftData();
+        //expect(nftDataBefore.content.toString()).toBe(null); // error: null. It means all is correct
+
+        const initResult = await nftItem.sendInit(sender.getSender(), toNano('0.05'), receiver.address);
+        expect(initResult.transactions).toHaveTransaction({
+            from: sender.address, // error reason
+            to: nftItem.address,
+            success: false,
+            exitCode: 405,
+        });
+
+        //const nftDataAfter = await nftItem.getNftData(); // error: null. It means contracts data isnt changed, all is correct
+        //expect(nftDataAfter.ownerAddress.toString({ testOnly: true })).toBe(
+        //receiver.address.toString({ testOnly: true }));
+    });
+    it('should UNsuccessfully init contract due not enough balance var:2', async () => {
+        nftItem = blockchain.openContract(
+            NftItem.createFromLiteConfig(
+                {
+                    index: 2,
+                    collection_address: collectionAddress.address,
+                },
+                code,
+            ),
+        );
+
+        const deployResult = await nftItem.sendDeploy(collectionAddress.getSender(), toNano('0.05'));
+
+        expect(deployResult.transactions).toHaveTransaction({
+            from: collectionAddress.address,
+            to: nftItem.address,
+            deploy: true,
+            success: true,
+        });
+
+        //const nftDataBefore = await nftItem.getNftData();
+        //expect(nftDataBefore.content.toString()).toBe(null); // error: null. It means all is correct
+
+        const initResult = await nftItem.sendInit(
+            collectionAddress.getSender(),
+            toNano('0.05'),
+            receiver.address,
+            'hello from init',
+            toNano('0.5'), // error reason
+        );
+        expect(initResult.transactions).toHaveTransaction({
+            from: collectionAddress.address,
+            to: nftItem.address,
+            success: false,
+            exitCode: 402,
+        });
+
+        //const nftDataAfter = await nftItem.getNftData(); // error: null. It means changes are not commited, all is correct
+        //expect(nftDataAfter.ownerAddress.toString({ testOnly: true })).toBe(
+        //receiver.address.toString({ testOnly: true }),
+        //);
     });
 });

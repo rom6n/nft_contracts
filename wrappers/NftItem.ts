@@ -9,12 +9,18 @@ import {
     Sender,
     SendMode,
 } from '@ton/core';
+import { todo } from 'node:test';
 
 export type NftItemConfig = {
     index: number;
     collection_address: Address;
     owner_address: Address;
     content: Cell;
+};
+
+export type NftItemConfigLite = {
+    index: number;
+    collection_address: Address;
 };
 
 export function nftItemConfigToCell(config: NftItemConfig): Cell {
@@ -26,6 +32,17 @@ export function nftItemConfigToCell(config: NftItemConfig): Cell {
         .storeRef(content)
         .endCell();
 }
+
+export function nftItemLiteConfigToCell(config: NftItemConfigLite) {
+    const { index, collection_address } = config;
+    return beginCell().storeUint(index, 64).storeAddress(collection_address).endCell();
+}
+
+export const opCodes = {
+    transfer: 0x5fcc3d14,
+    ownership_assigned: 0x05138d91,
+    get_static_data: 0x2fcb26a2,
+};
 
 export class NftItem implements Contract {
     constructor(
@@ -39,6 +56,12 @@ export class NftItem implements Contract {
 
     static createFromConfig(config: NftItemConfig, code: Cell, workchain = 0) {
         const data = nftItemConfigToCell(config);
+        const init = { code, data };
+        return new NftItem(contractAddress(workchain, init), init);
+    }
+
+    static createFromLiteConfig(config: NftItemConfigLite, code: Cell, workchain = 0) {
+        const data = nftItemLiteConfigToCell(config);
         const init = { code, data };
         return new NftItem(contractAddress(workchain, init), init);
     }
@@ -62,7 +85,7 @@ export class NftItem implements Contract {
         query_id?: number,
     ) {
         let body_builder = beginCell()
-            .storeUint(1, 32)
+            .storeUint(opCodes.transfer, 32)
             .storeUint(query_id ?? 0, 64)
             .storeAddress(transfer_to);
 
@@ -85,6 +108,41 @@ export class NftItem implements Contract {
             body: body_builder.endCell(),
         });
     }
+
+    async sendGetStaticData(provider: ContractProvider, via: Sender, value: bigint, query_id?: number) {
+        const bodyBuilder = beginCell()
+            .storeUint(opCodes.get_static_data, 32)
+            .storeUint(query_id ?? 0, 64)
+            .endCell();
+
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: bodyBuilder,
+        });
+    }
+
+    async sendInit(
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        new_owner: Address,
+        message_with_forward_amount_to_new_owner?: string,
+        forward_amount?: bigint,
+    ) {
+        const content = beginCell().storeStringTail('nft-2.json').endCell();
+        const bodyBuilder = beginCell().storeAddress(new_owner).storeRef(content);
+        if (message_with_forward_amount_to_new_owner && forward_amount) {
+            bodyBuilder.storeCoins(forward_amount).storeStringTail(message_with_forward_amount_to_new_owner);
+        }
+
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: bodyBuilder.endCell(),
+        });
+    }
+
     async getNftData(provider: ContractProvider) {
         const { stack } = await provider.get('get_nft_data', []);
         return {
