@@ -1,13 +1,51 @@
-import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider, Sender, SendMode } from '@ton/core';
+import {
+    Address,
+    beginCell,
+    Cell,
+    Contract,
+    contractAddress,
+    ContractProvider,
+    Dictionary,
+    Sender,
+    SendMode,
+    toNano,
+} from '@ton/core';
 
-export type NftCollectionConfig = {};
+export type NftCollectionConfig = {
+    owner_address: Address;
+    next_item_index: number;
+    content: Cell;
+    nft_item_code: Cell;
+    royalty_params: Cell;
+    editor_address: Address;
+};
 
 export function nftCollectionConfigToCell(config: NftCollectionConfig): Cell {
-    return beginCell().endCell();
+    return beginCell()
+        .storeAddress(config.owner_address)
+        .storeUint(config.next_item_index, 64)
+        .storeRef(config.content)
+        .storeRef(config.nft_item_code)
+        .storeRef(config.royalty_params)
+        .storeAddress(config.editor_address)
+        .endCell();
 }
 
+export const opCodes = {
+    deployNft: 1,
+    deployBatchNft: 2,
+    changeOwner: 3,
+    changeContent: 4,
+    changeRoyalty: 5,
+    changeEditor: 6,
+    changeCode: 10,
+};
+
 export class NftCollection implements Contract {
-    constructor(readonly address: Address, readonly init?: { code: Cell; data: Cell }) {}
+    constructor(
+        readonly address: Address,
+        readonly init?: { code: Cell; data: Cell },
+    ) {}
 
     static createFromAddress(address: Address) {
         return new NftCollection(address);
@@ -24,6 +62,152 @@ export class NftCollection implements Contract {
             value,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell().endCell(),
+        });
+    }
+
+    async sendDeployNft(
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        item_index: number,
+        forward_amount: bigint,
+        content: Cell,
+        query_id?: number,
+    ) {
+        let bodyBuilder = beginCell()
+            .storeUint(opCodes.deployNft, 32)
+            .storeUint(query_id ?? 0, 64)
+            .storeUint(item_index, 64)
+            .storeCoins(forward_amount)
+            .storeRef(content);
+
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: bodyBuilder.endCell(),
+        });
+    }
+
+    async sendDeployBatchNft(
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        minIndex: number,
+        maxIndex: number,
+        content: Cell,
+        forward_amount?: bigint,
+        query_id?: number,
+    ) {
+        let dictBuilder = Dictionary.empty(Dictionary.Keys.Uint(64), Dictionary.Values.Cell());
+
+        for (let index = minIndex; index <= maxIndex; index++) {
+            const item = beginCell()
+                .storeCoins(forward_amount ?? toNano('0.01'))
+                .storeRef(content)
+                .endCell();
+
+            dictBuilder = dictBuilder.set(index, item);
+        }
+
+        const dictCell = beginCell().storeDictDirect(dictBuilder).endCell(); // storeDictDirect
+        let bodyBuilder = beginCell()
+            .storeUint(2, 32)
+            .storeUint(query_id ?? 0, 64)
+            .storeRef(dictCell);
+
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: bodyBuilder.endCell(),
+        });
+    }
+
+    async sendChangeOwner(
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        new_owner: Address,
+        query_id?: number,
+    ) {
+        let bodyBuilder = beginCell()
+            .storeUint(opCodes.changeOwner, 32)
+            .storeUint(query_id ?? 0, 64)
+            .storeAddress(new_owner);
+
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: bodyBuilder.endCell(),
+        });
+    }
+
+    async sendChangeContent(
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        new_content: Cell,
+        query_id?: number,
+    ) {
+        let bodyBuilder = beginCell()
+            .storeUint(opCodes.changeContent, 32)
+            .storeUint(query_id ?? 0, 64)
+            .storeRef(new_content);
+
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: bodyBuilder.endCell(),
+        });
+    }
+
+    async sendChangeRoyaltyParams(
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        new_royalty: Cell,
+        query_id?: number,
+    ) {
+        let bodyBuilder = beginCell()
+            .storeUint(opCodes.changeRoyalty, 32)
+            .storeUint(query_id ?? 0, 64)
+            .storeRef(new_royalty);
+
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: bodyBuilder.endCell(),
+        });
+    }
+
+    async sendChangeEditor(
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        new_editor: Address,
+        query_id?: number,
+    ) {
+        let bodyBuilder = beginCell()
+            .storeUint(opCodes.changeEditor, 32)
+            .storeUint(query_id ?? 0, 64)
+            .storeAddress(new_editor);
+
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: bodyBuilder.endCell(),
+        });
+    }
+
+    async sendChangeCode(provider: ContractProvider, via: Sender, value: bigint, new_code: Cell, query_id?: number) {
+        let bodyBuilder = beginCell()
+            .storeUint(opCodes.changeCode, 32)
+            .storeUint(query_id ?? 0, 64)
+            .storeRef(new_code);
+
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: bodyBuilder.endCell(),
         });
     }
 }

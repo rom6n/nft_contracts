@@ -6,6 +6,7 @@ import {
     Contract,
     contractAddress,
     ContractProvider,
+    Dictionary,
     Sender,
     SendMode,
 } from '@ton/core';
@@ -98,8 +99,13 @@ export class NftItem implements Contract {
         body_builder = body_builder.storeInt(0, 1).storeCoins(forward_amount ?? 0);
 
         if (message_with_forward_amount_to_new_owner && forward_amount) {
-            const message_cell = beginCell().storeStringTail(message_with_forward_amount_to_new_owner).endCell();
-            body_builder = body_builder.storeRef(message_cell);
+            const message_cell = beginCell()
+                .storeUint(0, 32) // comments will start
+                .storeStringTail(message_with_forward_amount_to_new_owner)
+                .endCell();
+            body_builder = body_builder
+                .storeBit(1) //comment in a reference
+                .storeRef(message_cell);
         }
 
         await provider.internal(via, {

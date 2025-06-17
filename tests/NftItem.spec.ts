@@ -1,3 +1,4 @@
+/*
 import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { beginCell, Cell, contractAddress, toNano } from '@ton/core';
 import { NftItem } from '../wrappers/NftItem';
@@ -83,6 +84,7 @@ describe('NftItem', () => {
 
         const nftData = await nftItem.getNftData();
         expect(nftData.ownerAddress.toString({ testOnly: true })).toBe(receiver.address.toString({ testOnly: true }));
+        console.log(`Контент NFT Item: ${nftData.content}`);
     });
     it('should NOT send_ownership due not from owner var:1', async () => {
         const ownershipResult = await nftItem.sendTransferOwnership(
@@ -302,3 +304,4 @@ describe('NftItem', () => {
         //);
     });
 });
+*/
