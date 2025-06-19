@@ -2,6 +2,7 @@ import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { beginCell, Cell, toNano } from '@ton/core';
 import { NftCollection } from '../wrappers/NftCollection';
 import '@ton/test-utils';
+import { NftItem } from '../wrappers/NftItem';
 import { compile } from '@ton/blueprint';
 
 describe('NftCollection', () => {
@@ -47,7 +48,7 @@ describe('NftCollection', () => {
             ),
         );
 
-        const deployResult = await nftCollection.sendDeploy(owner.getSender(), toNano('100'));
+        const deployResult = await nftCollection.sendDeploy(owner.getSender(), toNano('0.05'));
 
         expect(deployResult.transactions).toHaveTransaction({
             from: owner.address,
@@ -63,12 +64,18 @@ describe('NftCollection', () => {
     });
 
     it('should successfully deploy NFT', async () => {
-        const nft_content = beginCell().storeStringTail('nft-1.json').endCell();
+        const nft_content = beginCell()
+            .storeAddress(owner.address)
+            .storeRef(beginCell().storeStringTail('nft-1.json').endCell())
+            .storeCoins(toNano('0.05'))
+            .storeStringTail('Hello')
+            .endCell();
+
         const deployNftResult = await nftCollection.sendDeployNft(
             owner.getSender(),
-            toNano(0.05),
+            toNano('0.15'),
             1,
-            toNano(0.02),
+            toNano('0.12'),
             nft_content,
             32052,
         );
@@ -80,12 +87,18 @@ describe('NftCollection', () => {
         });
     });
     it('should UNsuccessfully deploy NFT due not from owner', async () => {
-        const nft_content = beginCell().storeStringTail('nft-1.json').endCell();
+        const nft_content = beginCell()
+            .storeAddress(owner.address)
+            .storeRef(beginCell().storeStringTail('nft-1.json').endCell())
+            .storeCoins(toNano('0.05'))
+            .storeStringTail('Hello')
+            .endCell();
+
         const deployNftResult = await nftCollection.sendDeployNft(
             sender.getSender(),
-            toNano(0.05),
+            toNano('0.15'),
             1,
-            toNano(0.02),
+            toNano('0.12'),
             nft_content,
             67430,
         );
@@ -98,7 +111,13 @@ describe('NftCollection', () => {
         });
     });
     it('should UNsuccessfully deploy due wrong item index NFT', async () => {
-        const nft_content = beginCell().storeStringTail('nft-1.json').endCell();
+        const nft_content = beginCell()
+            .storeAddress(owner.address)
+            .storeRef(beginCell().storeStringTail('nft-1.json').endCell())
+            .storeCoins(toNano('0.05'))
+            .storeStringTail('Hello')
+            .endCell();
+
         const deployNftResult = await nftCollection.sendDeployNft(
             owner.getSender(),
             toNano(0.05),
@@ -116,12 +135,18 @@ describe('NftCollection', () => {
         });
     });
     it('should UNsuccessfully deploy due not enough balance NFT', async () => {
-        const nft_content = beginCell().storeStringTail('nft-1.json').endCell();
+        const nft_content = beginCell()
+            .storeAddress(owner.address)
+            .storeRef(beginCell().storeStringTail('nft-1.json').endCell())
+            .storeCoins(toNano('0.05'))
+            .storeStringTail('Hello')
+            .endCell();
+
         const deployNftResult = await nftCollection.sendDeployNft(
             owner.getSender(),
-            toNano(0.05),
+            toNano('0.15'),
             1,
-            toNano(500),
+            toNano('1'),
             nft_content,
             98453,
         );
@@ -134,15 +159,21 @@ describe('NftCollection', () => {
         });
     });
 
-    it('should successfully deploy batch NFT', async () => {
-        const nft_content = beginCell().storeStringTail('nft-1.json').endCell();
+    it('should successfully deploy batch NFT (1nft)', async () => {
+        const nft_content = beginCell()
+            .storeAddress(owner.address)
+            .storeRef(beginCell().storeStringTail('nft-1.json').endCell())
+            .storeCoins(toNano('0.05'))
+            .storeStringTail('Hello')
+            .endCell();
+
         const deployNftResult = await nftCollection.sendDeployBatchNft(
             owner.getSender(),
-            toNano('100'),
+            toNano('0.15'), // TON for collection
             1,
-            127,
+            1,
             nft_content,
-            toNano('0.01'),
+            toNano('0.12'), // TON for nft item
             34503,
         );
 
@@ -150,6 +181,80 @@ describe('NftCollection', () => {
             from: owner.address,
             to: nftCollection.address,
             success: true,
+        });
+    });
+    it('should successfully deploy batch NFT (100nft)', async () => {
+        const nft_content = beginCell()
+            .storeAddress(owner.address)
+            .storeRef(beginCell().storeStringTail('nft-1.json').endCell())
+            .storeCoins(toNano('0.05')) // forward message to someone from nft item
+            .storeStringTail('Hello')
+            .endCell();
+
+        const deployNftResult = await nftCollection.sendDeployBatchNft(
+            owner.getSender(),
+            toNano('30'), // TON for collection
+            1,
+            99,
+            nft_content,
+            toNano('0.12'), // TON for each nft item
+            23552,
+        );
+
+        expect(deployNftResult.transactions).toHaveTransaction({
+            from: owner.address,
+            to: nftCollection.address,
+            success: true,
+        });
+    });
+    it('should UNsuccessfully deploy batch NFT due not from owner (100nft)', async () => {
+        const nft_content = beginCell()
+            .storeAddress(owner.address)
+            .storeRef(beginCell().storeStringTail('nft-1.json').endCell())
+            .storeCoins(toNano('0.05'))
+            .storeStringTail('Hello')
+            .endCell();
+
+        const deployNftResult = await nftCollection.sendDeployBatchNft(
+            sender.getSender(),
+            toNano('15'),
+            1,
+            99,
+            nft_content,
+            toNano('0.12'),
+            23552,
+        );
+
+        expect(deployNftResult.transactions).toHaveTransaction({
+            from: sender.address,
+            to: nftCollection.address,
+            success: false,
+            exitCode: 401,
+        });
+    });
+    it('should UNsuccessfully deploy batch NFT due not enough balance (1nft)', async () => {
+        const nft_content = beginCell()
+            .storeAddress(owner.address)
+            .storeRef(beginCell().storeStringTail('nft-1.json').endCell())
+            .storeCoins(toNano('0.05'))
+            .storeStringTail('Hello')
+            .endCell();
+
+        const deployNftResult = await nftCollection.sendDeployBatchNft(
+            owner.getSender(),
+            toNano('0.15'), // TON for collection
+            1,
+            1,
+            nft_content,
+            toNano('0.2'), // TON for nft item
+            23552,
+        );
+
+        expect(deployNftResult.transactions).toHaveTransaction({
+            from: owner.address,
+            to: nftCollection.address,
+            success: false,
+            exitCode: 700,
         });
     });
 });

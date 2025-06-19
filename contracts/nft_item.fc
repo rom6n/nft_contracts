@@ -90,7 +90,7 @@ int workchain() asm "0 PUSHINT";
       rest_amount -= fwd_fees;
     }
 
-    throw_unless(402, rest_amount >= 0); ;; base nft spends fixed amount of gas, will not check for response
+    throw_unless(442, rest_amount >= 0); ;; base nft spends fixed amount of gas, will not check for response
 
     if (forward_amount) {
       send_msg(new_owner_address, forward_amount, op::ownership_assigned(), query_id, begin_cell().store_slice(owner_address).store_slice(in_msg_body), 1);  ;; paying fees, revert on errors
@@ -136,7 +136,7 @@ int workchain() asm "0 PUSHINT";
       if (in_msg_body.slice_data_empty?() == false) {
         var forward_amount = in_msg_body~load_coins();
         if (forward_amount) {
-          throw_unless(402, my_balance - forward_amount - fwd_fee >= min_tons_for_storage());
+          throw_unless(442, my_balance - forward_amount - fwd_fee >= min_tons_for_storage());
           force_chain(new_owner_address);
           send_msg(new_owner_address, forward_amount, op::ownership_assigned(), 0, begin_cell().store_slice(collection_address).store_slice(in_msg_body), 3); ;; paying fees, ignore errors
         }

@@ -1,4 +1,3 @@
-/*
 import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { beginCell, Cell, contractAddress, toNano } from '@ton/core';
 import { NftItem } from '../wrappers/NftItem';
@@ -134,7 +133,7 @@ describe('NftItem', () => {
             from: owner.address,
             to: nftItem.address,
             success: false,
-            exitCode: 402,
+            exitCode: 442,
         });
 
         const nftData = await nftItem.getNftData();
@@ -295,7 +294,7 @@ describe('NftItem', () => {
             from: collectionAddress.address,
             to: nftItem.address,
             success: false,
-            exitCode: 402,
+            exitCode: 442,
         });
 
         //const nftDataAfter = await nftItem.getNftData(); // error: null. It means changes are not commited, all is correct
@@ -304,4 +303,3 @@ describe('NftItem', () => {
         //);
     });
 });
-*/

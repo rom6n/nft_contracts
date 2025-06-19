@@ -51,18 +51,17 @@ slice calculate_nft_item_address(int wc, cell state_init) {
 }
 
 
-() deploy_nft_item(int item_index, slice sender, cell nft_item_code, int amount, cell nft_content, int fwd_fee) impure {
+() deploy_nft_item(int item_index, cell nft_item_code, int amount, cell nft_content, int fwd_fee) impure {
   var [balance, _] = get_balance();
   throw_unless(700, balance - amount - fwd_fee >= const::min_tons_for_storage());
   cell state_init = calculate_nft_item_state_init(item_index, nft_item_code);
   slice nft_address = calculate_nft_item_address(workchain(), state_init);
-
   var msg = begin_cell()
             .store_uint(0x18, 6)
             .store_slice(nft_address)
             .store_coins(amount)
             .store_uint(4 + 2 + 1, 1 + 4 + 4 + 64 + 32 + 1 + 1 + 1)
-            .store_ref(state_init) ;; возможно сюда можно добавить owner и content для nft item
+            .store_ref(state_init)
             .store_ref(nft_content);
   send_raw_message(msg.end_cell(), 1); ;; pay transfer fees separately, revert on errors
 }
@@ -123,7 +122,7 @@ slice calculate_nft_item_address(int wc, cell state_init) {
       int item_index = in_msg_body~load_uint(64);
       throw_unless(402, item_index <= next_item_index);
       var is_last = item_index == next_item_index;
-      deploy_nft_item(item_index, sender_address, nft_item_code, in_msg_body~load_coins(), in_msg_body~load_ref(), fwd_fee);
+      deploy_nft_item(item_index, nft_item_code, in_msg_body~load_coins(), in_msg_body~load_ref(), fwd_fee);
       if (is_last) {
         next_item_index += 1;
         save_data(owner_address, next_item_index, content, nft_item_code, royalty_params, editor_address);
@@ -136,20 +135,19 @@ slice calculate_nft_item_address(int wc, cell state_init) {
       int counter = 0;
       cell deploy_list = in_msg_body~load_ref();
       do {
-        var (item_index, item, f?) = deploy_list~udict::delete_get_min(64);
+        var (item_index, item_cell, f?) = deploy_list~udict::delete_get_min(64);
         
         if (f?) {
           counter += 1;
           if (counter >= 250) { ;; Limit due to limits of action list size
             throw(399);
           }
+          slice item = item_cell~load_ref().begin_parse();
 
-          var item_ref = item~load_ref().begin_parse();
-          int amount_to_forward = item_ref~load_coins();
-          cell content_nft_item = item_ref~load_ref();
-      
+          int amount_to_forward = item~load_coins();
+          cell nft_content = item~load_ref();
           throw_unless(500 + counter, item_index <= next_item_index);
-          deploy_nft_item(item_index, sender_address, nft_item_code, amount_to_forward, content_nft_item, fwd_fee);
+          deploy_nft_item(item_index, nft_item_code, amount_to_forward, nft_content, fwd_fee);
           if (item_index == next_item_index) {
             next_item_index += 1;
           }

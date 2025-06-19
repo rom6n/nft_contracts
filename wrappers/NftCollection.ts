@@ -102,23 +102,23 @@ export class NftCollection implements Contract {
 
         for (let index = minIndex; index <= maxIndex; index++) {
             const item = beginCell()
-                .storeCoins(forward_amount ?? toNano('0.01'))
+                .storeCoins(forward_amount ?? toNano('0.12'))
                 .storeRef(content)
                 .endCell();
 
             dictBuilder = dictBuilder.set(index, item);
         }
 
-        const dictCell = beginCell().storeDictDirect(dictBuilder).endCell(); // storeDictDirect
         let bodyBuilder = beginCell()
             .storeUint(2, 32)
             .storeUint(query_id ?? 0, 64)
-            .storeRef(dictCell);
+            .storeDict(dictBuilder)
+            .endCell();
 
         await provider.internal(via, {
             value,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: bodyBuilder.endCell(),
+            body: bodyBuilder,
         });
     }
 
