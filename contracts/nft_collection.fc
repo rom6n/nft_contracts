@@ -226,16 +226,19 @@ cell get_nft_content(int index, cell individual_nft_content) method_id {
           .end_cell());
 }
 
-(int, slice, cell, cell, cell, cell, slice) get_all_collection_data() method_id {
+(int, slice, cell, cell, cell, int, int, slice, slice) get_all_collection_data() method_id {
   var (owner_address, next_item_index, content, nft_item_code, royalty_params, editor_address) = load_data();
   slice cs = content.begin_parse();
+  slice rs = royalty_params.begin_parse();
   return (
     next_item_index, 
     owner_address, 
     cs~load_ref(), ;; collection content
     cs~load_ref(), ;; common content for nft item
     nft_item_code, 
-    royalty_params, 
+    rs~load_uint(16),
+    rs~load_uint(16),
+    rs~load_msg_addr(), 
     editor_address
   );
 }

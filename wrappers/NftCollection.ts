@@ -1,3 +1,4 @@
+import { SHA256U } from '@tact-lang/compiler';
 import {
     Address,
     beginCell,
@@ -209,5 +210,41 @@ export class NftCollection implements Contract {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: bodyBuilder.endCell(),
         });
+    }
+
+    async sendWrongOpCode(provider: ContractProvider, via: Sender, value: bigint, query_id?: number) {
+        let bodyBuilder = beginCell()
+            .storeUint(999, 32)
+            .storeUint(query_id ?? 0, 64);
+
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: bodyBuilder.endCell(),
+        });
+    }
+
+    async getCollectionData(provider: ContractProvider) {
+        const { stack } = await provider.get('get_all_collection_data', []);
+        return {
+            next_item_index: stack.readNumber(),
+            owner: stack.readAddress(),
+            collection_content: stack.readString(),
+            common_content: stack.readString(),
+            nft_item_code: stack.readCell(),
+            royalty_params_min: stack.readNumber(),
+            royalty_params_max: stack.readNumber(),
+            royalty_params_address: stack.readAddress(),
+            editor_address: stack.readAddress(),
+        };
+    }
+
+    async getCollectionData2(provider: ContractProvider) {
+        const { stack } = await provider.get('get_collection_data', []);
+        return {
+            next_item_index: stack.readNumber(),
+            collection_content: stack.readString(),
+            owner: stack.readAddress(),
+        };
     }
 }
