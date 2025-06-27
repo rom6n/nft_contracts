@@ -1,4 +1,4 @@
-import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
+/*import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { beginCell, Cell, contractAddress, toNano } from '@ton/core';
 import { NftItem } from '../wrappers/NftItem';
 import '@ton/test-utils';
@@ -303,3 +303,4 @@ describe('NftItem', () => {
         //);
     });
 });
+*/

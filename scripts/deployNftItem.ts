@@ -1,4 +1,4 @@
-import { toNano } from '@ton/core';
+/*import { toNano } from '@ton/core';
 import { NftItem } from '../wrappers/NftItem';
 import { compile, NetworkProvider } from '@ton/blueprint';
 
@@ -11,3 +11,4 @@ export async function run(provider: NetworkProvider) {
 
     // run methods on `nftItem`
 }
+*/

@@ -103,7 +103,7 @@ export class NftCollection implements Contract {
 
         for (let index = minIndex; index <= maxIndex; index++) {
             const item = beginCell()
-                .storeCoins(forward_amount ?? toNano('0.12'))
+                .storeCoins(forward_amount ?? toNano('0.11'))
                 .storeRef(content)
                 .endCell();
 

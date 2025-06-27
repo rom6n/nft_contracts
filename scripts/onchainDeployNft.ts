@@ -23,12 +23,12 @@ export async function run(provider: NetworkProvider, args: string[]) {
 
     const nft_content = beginCell()
         .storeAddress(Address.parse('0QDU46qYz4rHAJhszrW9w6imF8p4Cw5dS1GpPTcJ9vqNSmnf'))
-        .storeRef(beginCell().storeStringTail('1.json').endCell())
+        .storeRef(beginCell().storeStringTail('2.json').endCell())
         .storeCoins(toNano('0.05'))
         .storeStringTail('Your NFT has deployed!')
         .endCell();
 
-    await nftCollection.sendDeployNft(provider.sender(), toNano('0.15'), 1, toNano('0.12'), nft_content, 84627);
+    await nftCollection.sendDeployNft(provider.sender(), toNano('0.15'), 2, toNano('0.12'), nft_content, 84627);
 
     ui.write('Waiting for next item index to edit...');
 

@@ -10,7 +10,7 @@
 #include "imports/stdlib.fc";
 #include "imports/op-codes.fc";
 
-int const::min_tons_for_storage() asm "50000000 PUSHINT";
+int const::min_tons_for_storage() asm "10000000 PUSHINT";
 int workchain() asm "0 PUSHINT";
 
 (slice, int, cell, cell, cell, slice) load_data() inline {
