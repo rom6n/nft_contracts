@@ -21,30 +21,11 @@ describe('MarketplaceContract', () => {
 
     beforeAll(async () => {
         code = await compile('MarketplaceContract');
-        const words = [
-            'test',
-            'orange',
-            'biometry',
-            'car',
-            'science',
-            'classic',
-            'sahara',
-            'kitchen',
-            'violet',
-            'speed',
-            'kill',
-            'submarine',
-            'business',
-            'glue',
-            'oil',
-            'jail',
-            'spy',
-            'risk',
-            'yield',
-            'water',
-            'knee',
-        ];
+
+        require('dotenv').config();
+        const words = process.env.SEED_WORDS?.split(',') ?? [];
         const privateKey = await mnemonicToPrivateKey(words);
+
         public_key = privateKey.publicKey;
         secret_key = privateKey.secretKey;
     });
@@ -110,5 +91,15 @@ describe('MarketplaceContract', () => {
             to: marketplaceContract.address,
             success: true,
         });
+    });
+
+    it('should return seqno', async () => {
+        const seqno = await marketplaceContract.getSeqno();
+        console.log(`Seqno: ${seqno}`);
+        expect(seqno).toBe(0);
+    });
+    it('should return public key', async () => {
+        const pk = await marketplaceContract.getPublicKey();
+        console.log(`Public Key: ${pk}`);
     });
 });

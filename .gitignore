@@ -21,3 +21,6 @@ Session.vim
 .nvim/
 .emacs/
 .helix/
+
+# private
+.env

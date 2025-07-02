@@ -69,4 +69,14 @@ export class MarketplaceContract implements Contract {
             body: bodyBuilder,
         });
     }
+
+    async getSeqno(provider: ContractProvider) {
+        let { stack } = await provider.get('seqno', []);
+        return stack.readNumber();
+    }
+
+    async getPublicKey(provider: ContractProvider) {
+        let { stack } = await provider.get('get_public_key', []);
+        return stack.readNumber();
+    }
 }
