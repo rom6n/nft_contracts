@@ -5,7 +5,7 @@
 #include "imports/stdlib.fc";
 #include "imports/op-codes.fc";
 
-int min_gas_amount() asm "100000000 PUSHINT"; ;; 0.1 TON
+int min_gas_amount() asm "50000000 PUSHINT"; ;; 0.05 TON
 slice msg::cancel_msg() asm "<b 124 word cancel| $, b> <s PUSHSLICE";
 () check_std_addr(slice s) impure asm "REWRITESTDADDR" "DROP2";
 
@@ -173,7 +173,7 @@ _ load_fees(cell fees_cell) inline {
   if (op != 0) {
     query_id = in_msg_body~load_uint(64);
   } else {
-    if (equal_slices(msg::cancel_msg(), in_msg_body)) {
+    if (equal_slice_bits(msg::cancel_msg(), in_msg_body)) {
       op = 3;
     }
   }
@@ -185,7 +185,7 @@ _ load_fees(cell fees_cell) inline {
 
   var is_initialized = nft_owner_address.slice_bits() > 2; ;; not initialized if null address
 
-  if ((op == 555) & ((is_complete == 1) | (~ is_initialized)) & equal_slices(sender_address, marketplace_address)) {
+  if ((op == 555) & ((is_complete == 1) | (~ is_initialized)) & equal_slice_bits(sender_address, marketplace_address)) {
     ;; way to fix unexpected troubles with sale contract
     ;; for example if some one transfer nft to this contract
     var msg = in_msg_body~load_ref().begin_parse();
@@ -205,17 +205,33 @@ _ load_fees(cell fees_cell) inline {
   ;; Throw if sale is complete
   throw_if(404, is_complete == 1);
 
-  if ((op == 0x6c6c2080) & equal_slices(sender_address, nft_owner_address)) {
-    var (new_full_price, new_marketplace_fee, new_royalty_amount) = (in_msg_body~load_coins(), in_msg_body~load_coins(), in_msg_body~load_coins());
-    int profit_price = new_full_price - new_marketplace_fee - new_royalty_amount;
-    throw_if(408, profit_price < 1);
-
+  if ((op == 0x6c6c2080) & (equal_slice_bits(sender_address, nft_owner_address) | equal_slice_bits(sender_address, marketplace_address))) {
     var (
       marketplace_fee_address,
       marketplace_fee,
       royalty_address,
       royalty_amount
     ) = load_fees(fees_cell);
+
+    int new_full_price = 0;
+    int new_marketplace_fee = 0;
+    int new_royalty_amount = 0;
+
+    if (equal_slice_bits(sender_address, marketplace_address)) {
+      new_full_price = in_msg_body~load_coins();
+      new_marketplace_fee = in_msg_body~load_coins();
+      new_royalty_amount = in_msg_body~load_coins();
+    } else {
+      new_full_price = in_msg_body~load_coins();
+      new_marketplace_fee = marketplace_fee * (new_full_price / full_price);
+      new_royalty_amount = royalty_amount * (new_full_price / full_price);
+    }
+    ;;trow_if(800, new_full_price < 100000000); ;; 0.1 TON
+    ;;throw_if(801, new_full_price > 1000000000000000); ;; 1 million TON
+
+    int profit_price = new_full_price - new_marketplace_fee - new_royalty_amount;
+    throw_if(408, profit_price < 1);
+
 
     var new_fees_cell = begin_cell()
     .store_slice(marketplace_fee_address)
@@ -240,11 +256,11 @@ _ load_fees(cell fees_cell) inline {
 
   if (~ is_initialized) {
 
-    if (equal_slices(sender_address, marketplace_address)) {
+    if (equal_slice_bits(sender_address, marketplace_address)) {
       return (); ;; just accept coins on deploy
     }
 
-    throw_unless(500, equal_slices(sender_address, nft_address));
+    throw_unless(500, equal_slice_bits(sender_address, nft_address));
     throw_unless(501, op == op::ownership_assigned());
     slice prev_owner_address = in_msg_body~load_msg_addr();
 
@@ -266,7 +282,7 @@ _ load_fees(cell fees_cell) inline {
   if (op == 3) {
     ;; cancel sale
     throw_unless(457, msg_value >= min_gas_amount());
-    throw_unless(458, equal_slices(sender_address, nft_owner_address) | equal_slices(sender_address, marketplace_address));
+    throw_unless(458, equal_slice_bits(sender_address, nft_owner_address) | equal_slice_bits(sender_address, marketplace_address));
 
     var msg = begin_cell()
     .store_uint(0x10, 6) ;; nobounce

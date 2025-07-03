@@ -1,4 +1,3 @@
-import { SHA256U } from '@tact-lang/compiler';
 import {
     Address,
     beginCell,
