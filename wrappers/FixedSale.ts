@@ -71,18 +71,20 @@ export class FixedSale implements Contract {
     async sendEmergencyMessage(
         provider: ContractProvider,
         via: Sender,
+        value: bigint,
         to: Address,
-        amount: bigint,
+        amount_to: bigint,
+        mode: number,
         query_id?: bigint,
     ) {
         const emergency_msg_body = beginCell()
             .storeUint(0x10, 6)
             .storeAddress(to)
-            .storeCoins(amount)
+            .storeCoins(amount_to)
             .storeUint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
             .endCell();
 
-        const emergency_msg_cell = beginCell().storeUint(0, 8).storeRef(emergency_msg_body).endCell();
+        const emergency_msg_cell = beginCell().storeUint(mode, 8).storeRef(emergency_msg_body).endCell();
 
         const body = beginCell()
             .storeUint(555, 32)
@@ -91,7 +93,7 @@ export class FixedSale implements Contract {
             .endCell();
 
         await provider.internal(via, {
-            value: BigInt(0),
+            value,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body,
         });
@@ -108,10 +110,21 @@ export class FixedSale implements Contract {
         });
     }
 
-    async sendChangeSaleData(provider: ContractProvider, via: Sender, value: bigint, query_id?: bigint) {
+    async sendChangeSaleData(
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint,
+        new_full_price: bigint,
+        new_marketplace_fee: bigint,
+        new_royalty_amount: bigint,
+        query_id?: bigint,
+    ) {
         const bodyBuilder = beginCell()
             .storeUint(0x6c6c2080, 32)
             .storeUint(query_id ?? 0, 64)
+            .storeCoins(new_full_price)
+            .storeCoins(new_marketplace_fee)
+            .storeCoins(new_royalty_amount)
             .endCell();
 
         await provider.internal(via, {
@@ -119,5 +132,69 @@ export class FixedSale implements Contract {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: bodyBuilder,
         });
+    }
+
+    async sendCancelSale(provider: ContractProvider, via: Sender, value: bigint) {
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: beginCell().storeUint(3, 32).storeUint(0, 64).endCell(),
+        });
+    }
+
+    async sendBuy(provider: ContractProvider, via: Sender, value: bigint) {
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: beginCell().endCell(),
+        });
+    }
+
+    async sendNft(provider: ContractProvider, via: Sender, value: bigint, prev_owner: Address, opcode: number) {
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: beginCell()
+                .storeUint(opcode, 32)
+                .storeUint(0, 64)
+                .storeBuilder(beginCell().storeAddress(prev_owner).storeStringTail('hello'))
+                .endCell(),
+        });
+    }
+
+    async getFixPriceData(provider: ContractProvider) {
+        const { stack } = await provider.get('get_fix_price_data', []);
+        return {
+            is_completed: stack.readBoolean(),
+            created_at: stack.readNumber(),
+            marketplace_address: stack.readAddress(),
+            nft_address: stack.readAddress(),
+            nft_owner_address: stack.readAddress(),
+            full_price: stack.readNumber(),
+            marketplace_fee_address: stack.readAddress(),
+            marketplace_fee: stack.readNumber(),
+            royalty_address: stack.readAddress(),
+            royalty_amount: stack.readNumber(),
+            sold_at: stack.readNumber(),
+            query_id: stack.readNumber(),
+            balance: stack.readNumber(),
+        };
+    }
+
+    async getSaleData(provider: ContractProvider) {
+        const { stack } = await provider.get('get_sale_data', []);
+        return {
+            ID: stack.readNumber(),
+            is_completed: stack.readBoolean(),
+            created_at: stack.readNumber(),
+            marketplace_address: stack.readAddress(),
+            nft_address: stack.readAddress(),
+            nft_owner_address: stack.readAddress(),
+            full_price: stack.readNumber(),
+            marketplace_fee_address: stack.readAddress(),
+            marketplace_fee: stack.readNumber(),
+            royalty_address: stack.readAddress(),
+            royalty_amount: stack.readNumber(),
+        };
     }
 }

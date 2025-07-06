@@ -1,4 +1,4 @@
-import { Address, toNano } from '@ton/core';
+import { Address, toNano} from '@ton/core';
 import { FixedSale } from '../wrappers/FixedSale';
 import { compile, NetworkProvider } from '@ton/blueprint';
 
