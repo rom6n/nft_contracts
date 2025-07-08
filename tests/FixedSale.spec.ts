@@ -3,7 +3,6 @@ import { Cell, fromNano, toNano } from '@ton/core';
 import { FixedSale } from '../wrappers/FixedSale';
 import '@ton/test-utils';
 import { compile } from '@ton/blueprint';
-import { todo } from 'node:test';
 
 describe('FixedSale', () => {
     let code: Cell;

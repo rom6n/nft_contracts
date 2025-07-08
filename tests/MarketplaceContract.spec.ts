@@ -1,4 +1,4 @@
-/*import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
+import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { beginCell, Cell, storeStateInit, toNano } from '@ton/core';
 import { MarketplaceContract } from '../wrappers/MarketplaceContract';
 import '@ton/test-utils';
@@ -103,4 +103,4 @@ describe('MarketplaceContract', () => {
         console.log(`Public Key: ${pk}`);
     });
 });
-*/
+

@@ -59,6 +59,7 @@ export class FixedSale implements Contract {
         const init = { code, data };
         return new FixedSale(contractAddress(workchain, init), init);
     }
+    
 
     async sendDeploy(provider: ContractProvider, via: Sender, value: bigint) {
         await provider.internal(via, {
