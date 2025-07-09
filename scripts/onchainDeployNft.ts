@@ -11,39 +11,45 @@ export async function run(provider: NetworkProvider, args: string[]) {
         ui.write(`Error: Contract at address ${address} is not deployed!`);
         return;
     }
-
     const nftCollection = provider.open(NftCollection.createFromAddress(address));
-
-    //const MessageBefore = await myContract.getContractData();
-    //let random = Math.floor(Math.random() * 100);
-
-    //await myContract.sendMessageEdit(provider.sender(), toNano('0.01'), `TEST MESSAGE ONCHAIN №${random}`.toString());
-    //await myContract.sendDeleteMessage(provider.sender(), toNano('0.02'));
     const dataBefore = await nftCollection.getCollectionData2();
+
+    const forwardPayload = beginCell()
+        .storeUint(0, 32) // its a text comment
+        .storeStringTail(`Deploy NFT #${dataBefore.next_item_index}`)
+        .endCell();
 
     const nft_content = beginCell()
         .storeAddress(Address.parse('0QDU46qYz4rHAJhszrW9w6imF8p4Cw5dS1GpPTcJ9vqNSmnf'))
-        .storeRef(beginCell().storeStringTail('2.json').endCell())
+        .storeRef(beginCell().storeStringTail('1.json').endCell())
         .storeCoins(toNano('0.05'))
-        .storeStringTail('Your NFT has deployed!')
+        .storeBit(1) // have a comment
+        .storeRef(forwardPayload)
         .endCell();
 
-    await nftCollection.sendDeployNft(provider.sender(), toNano('0.15'), 2, toNano('0.12'), nft_content, 84627);
+    await nftCollection.sendDeployNft(
+        provider.sender(),
+        toNano('0.12'),
+        dataBefore.next_item_index,
+        toNano('0.11'),
+        nft_content,
+        34521,
+    );
 
-    ui.write('Waiting for next item index to edit...');
+    ui.write('🔄️ Waiting for next item index to edit...');
 
     let dataAfter = await nftCollection.getCollectionData2();
     let attempt = 1;
     while (dataAfter.next_item_index === dataBefore.next_item_index) {
-        ui.setActionPrompt(`Attempt ${attempt}`);
+        ui.setActionPrompt(`🔄️ Attempt ${attempt}`);
         await sleep(2000);
         dataAfter = await nftCollection.getCollectionData2();
         attempt++;
     }
 
     ui.clearActionPrompt();
-    ui.write('NFT successfully deployed !!');
+    ui.write('✅ NFT successfully deployed !!');
     console.log(
-        `FULL DATA:\nOwner: ${dataAfter.owner}\nnext item index: ${dataAfter.next_item_index}\ncollection content: ${dataAfter.collection_content}`,
+        `✅ FULL DATA:\n| Owner: ${dataAfter.owner}\n| next item index: ${dataAfter.next_item_index}\n| collection content: ${dataAfter.collection_content}`,
     );
 }

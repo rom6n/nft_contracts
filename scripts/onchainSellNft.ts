@@ -7,7 +7,7 @@ export async function run(provider: NetworkProvider, args: string[]) {
     const ui = provider.ui();
 
     const NftAddress = Address.parse('EQBvmBV8MXO-AtTVP0noRkhCp9bumrePRz5RTiZNuwYAXBnt');
-    const FixedSaleAddress = Address.parse('EQAshelfpDldq5Fuy0iMG03KWrlsIbM47QPPvE4nb8BjiJIL');
+    const FixedSaleAddress = Address.parse('EQB4i8WWF2SP9inyMWUY1psu3Bwmz5w4NaHtTL9Mbe6a_pZe');
 
     if (!((await provider.isContractDeployed(NftAddress)) && (await provider.isContractDeployed(FixedSaleAddress)))) {
         ui.write(`Error: Contract at address ${NftAddress} or ${FixedSaleAddress} is not deployed!`);
@@ -26,6 +26,21 @@ export async function run(provider: NetworkProvider, args: string[]) {
         toNano('0.02'),
         303030,
     );
+    let attempt = 0;
+    let is_done = false;
 
-    ui.write('Done. Check it');
+    while (!is_done) {
+        try {
+            await fixedSale.getFixPriceData();
+        } catch {
+            attempt += 1;
+            ui.setActionPrompt(`Attempt ${attempt}`);
+            await sleep(2000);
+        } /*finally {
+            is_done = true;
+            ui.write('Done. Check it');
+            const dataAfter = await fixedSale.getFixPriceData();
+            ui.write(`DATA: \nOwner: ${dataAfter.nft_owner_address}`);
+        }*/
+    }
 }

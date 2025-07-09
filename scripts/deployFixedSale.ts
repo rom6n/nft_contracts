@@ -21,6 +21,9 @@ export async function run(provider: NetworkProvider) {
         return;
     }
 
+    // Наблюдаю за балансом этого контракта: EQAjqLqI_9l5vdVn5QydCmeCp3s16uJErnnN0eXC2vbtlXfJ
+    // баланс на начало 09.07.2025: 0.042619597 TON
+
     const fixedSale = provider.open(
         FixedSale.createFromConfig(
             {
@@ -49,7 +52,7 @@ export async function run(provider: NetworkProvider) {
         nft_owner_address: undefined,
         full_price: toNano('1.0'), // Set the full price for the sale
         marketplace_fee_address: Address.parse('0QDU46qYz4rHAJhszrW9w6imF8p4Cw5dS1GpPTcJ9vqNSmnf'), // Replace with actual marketplace fee address
-        marketplace_fee: toNano('0.3'), // Set the marketplace fee
+        marketplace_fee: toNano('0.04'), // Set the marketplace fee
         royalty_address: Address.parse('0QDU46qYz4rHAJhszrW9w6imF8p4Cw5dS1GpPTcJ9vqNSmnf'), // Replace with actual royalty address
         royalty_amount: toNano('0.03'), // Set the royalty amount
         sold_at: 0, // Initially not sold
