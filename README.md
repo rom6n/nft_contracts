@@ -1,3 +1,5 @@
+NFT smart contracts for TON blockchain
+
 # nft_contracts
 
 ## Project structure
